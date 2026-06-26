@@ -123,6 +123,11 @@ def framed_thumb(img: Image.Image, has_garbage: bool, border: int = 6) -> Image.
     return ImageOps.expand(img.convert("RGB"), border=border, fill=color)
 
 
+def _is_dirty(res: dict) -> bool:
+    """2領域以上の場合のみゴミありと判定する（1領域はクリーン扱い）"""
+    return len(res["bboxes"]) >= 2
+
+
 def show_results(results: list, cols_count: int):
     """結果をグリッド表示する"""
     if not results:
@@ -130,7 +135,7 @@ def show_results(results: list, cols_count: int):
         return
 
     # ── サマリー ──────────────────────────────────────────────────
-    gc = sum(1 for r in results if r["has_garbage"])
+    gc = sum(1 for r in results if _is_dirty(r))
     ok = len(results) - gc
 
     m1, m2, m3 = st.columns(3)
@@ -143,9 +148,9 @@ def show_results(results: list, cols_count: int):
     cols = st.columns(cols_count)
     for i, res in enumerate(results):
         with cols[i % cols_count]:
-            thumb = framed_thumb(res["thumb"], res["has_garbage"])
+            thumb = framed_thumb(res["thumb"], _is_dirty(res))
             st.image(thumb, use_container_width=True)
-            if res["has_garbage"]:
+            if _is_dirty(res):
                 st.markdown(
                     f'<div class="result-label-ng">✗ {res["name"]}<br>'
                     f'{res["pixel_count"]:,} px &nbsp;|&nbsp; {len(res["bboxes"])} 領域</div>',
